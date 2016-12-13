@@ -1,0 +1,93 @@
+#!/bin/bash -e
+
+# make sure currently the master branch is checked out
+CURRENT_BRANCH=`git branch | grep "^*" | sed -e 's|^* ||'`
+if [ "${CURRENT_BRANCH}" != "master" ]; then
+  echo "Your current branch is ${CURRENT_BRANCH} and not master. Please merge your changes into the master branch first!"
+  exit 1
+fi
+
+# check for uncommitted changes
+if [ -n "`git status --porcelain -uno`" ]; then
+  echo "You have uncommitted changes in your working copy. Please commit everything first!"
+  exit 1
+fi
+
+# obtain the latest tag and version
+LAST_TAG=`git tag | tail -n1`
+echo "Last tag: ${LAST_TAG}"
+LAST_VERSION=`echo $LAST_TAG | sed -e 's|^v||'`
+echo "Last version: ${LAST_VERSION}"
+
+# obtain the change log since the latest tag
+echo "Changes since ${LAST_VERSION}:"
+CHANGES=`mktemp`
+echo "============================================================"
+git-show-changes-since-last-tag | grep -v "^commit " | grep -v "Author: " | grep -v "Date: " | sed -e 's|^ *||' | tee $CHANGES
+echo "============================================================"
+
+# extract new version from CMakeLists.txt
+MAJOR=`grep -i 'set(${PROJECT_NAME}_MAJOR_VERSION' CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MAJOR_VERSION ||i' -e 's|)$||'`
+MINOR=`grep -i 'set(${PROJECT_NAME}_MINOR_VERSION' CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MINOR_VERSION ||i' -e 's|)$||'`
+PATCH=`grep -i 'set(${PROJECT_NAME}_PATCH_VERSION' CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_PATCH_VERSION ||i' -e 's|)$||'`
+
+# check that the new version is different from the current
+NEXT_VERSION=${MAJOR}.${MINOR}.${PATCH}
+if [ "$NEXT_VERSION" == "$LAST_VERSION" ]; then
+  echo "The version in CMakeLists.txt is the same as the last tag. Please update first!"
+  rm -f $CHANGES
+  exit 1
+fi
+echo "The new version will be: ${NEXT_VERSION}"
+
+# build next tag
+if [ "${LAST_TAG:0:1}" == "v" ]; then
+  NEXT_TAG=v${NEXT_VERSION}
+else
+  NEXT_TAG=${NEXT_VERSION}
+fi
+echo "The new tag will be: ${NEXT_TAG}"
+
+# determine release type (major, minor or patch)
+IFS='.' read -r -a LAST_VERSION_ARRAY <<< "$LAST_VERSION"
+RELEASE_TYPE="PATCH"
+if [ "${LAST_VERSION_ARRAY[0]}" != "${MAJOR}" ]; then
+  RELEASE_TYPE="MAJOR"
+  if [ "${LAST_VERSION_ARRAY[1]}" -ne 0 -o "${LAST_VERSION_ARRAY[2]}" -ne 0 ]; then
+    echo "*** Warning: Major release, but minor and patch is not zero!"
+  fi
+elif [ "${LAST_VERSION_ARRAY[1]}" != "${MINOR}" ]; then
+  RELEASE_TYPE="MINOR"
+  if [ "${LAST_VERSION_ARRAY[2]}" -ne 0 ]; then
+    echo "*** Warning: Minor release, but patch is not zero!"
+  fi
+fi
+
+echo "Release type: ${RELEASE_TYPE}"
+
+# ask whether to proceed
+echo ""
+echo -n "Do you want to proceed with creating the tag (y/N)? "
+read ANSWER
+if [ "$ANSWER" != "y" ]; then
+  echo "Aborted."
+  rm -f $CHANGES
+  exit 1
+fi
+
+# prepend header to the changelog
+CHANGES_WITH_HEADER=`mktemp`
+echo "New ${RELEASE_TYPE} release ${NEXT_VERSION}" > $CHANGES_WITH_HEADER
+echo "" >> $CHANGES_WITH_HEADER
+echo "Changes since ${LAST_VERSION}:" >> $CHANGES_WITH_HEADER
+cat $CHANGES >> $CHANGES_WITH_HEADER
+
+# edit the changelog
+nano ${CHANGES_WITH_HEADER}
+
+# now make the tag
+git tag -a ${NEXT_TAG} -F ${CHANGES_WITH_HEADER}
+
+# delete the changelog files
+rm -f $CHANGES $CHANGES_WITH_HEADER
+
