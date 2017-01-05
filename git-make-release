@@ -53,12 +53,12 @@ IFS='.' read -r -a LAST_VERSION_ARRAY <<< "$LAST_VERSION"
 RELEASE_TYPE="PATCH"
 if [ "${LAST_VERSION_ARRAY[0]}" != "${MAJOR}" ]; then
   RELEASE_TYPE="MAJOR"
-  if [ "${LAST_VERSION_ARRAY[1]}" -ne 0 -o "${LAST_VERSION_ARRAY[2]}" -ne 0 ]; then
+  if [ "${MINOR}" -ne 0 -o "${PATCH}" -ne 0 ]; then
     echo "*** Warning: Major release, but minor and patch is not zero!"
   fi
 elif [ "${LAST_VERSION_ARRAY[1]}" != "${MINOR}" ]; then
   RELEASE_TYPE="MINOR"
-  if [ "${LAST_VERSION_ARRAY[2]}" -ne 0 ]; then
+  if [ "${PATCH}" -ne 0 ]; then
     echo "*** Warning: Minor release, but patch is not zero!"
   fi
 fi
