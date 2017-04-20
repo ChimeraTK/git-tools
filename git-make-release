@@ -83,7 +83,7 @@ echo "Changes since ${LAST_VERSION}:" >> $CHANGES_WITH_HEADER
 cat $CHANGES >> $CHANGES_WITH_HEADER
 
 # edit the changelog
-nano ${CHANGES_WITH_HEADER}
+editor ${CHANGES_WITH_HEADER}
 
 # now make the tag
 git tag -a ${NEXT_TAG} -F ${CHANGES_WITH_HEADER}
