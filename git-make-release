@@ -1,9 +1,5 @@
 #!/bin/bash -e
 
-#
-# https://stackoverflow.com/questions/59895/get-the-source-directory-of-a-bash-script-from-within-the-script-itself
-script_home=dirname "$(readlink -f "$0")"
-
 # make sure currently the master branch is checked out
 CURRENT_BRANCH=`git branch | grep "^*" | sed -e 's|^* ||'`
 if [ "${CURRENT_BRANCH}" != "master" ]; then
@@ -27,7 +23,7 @@ echo "Last version: ${LAST_VERSION}"
 echo "Changes since ${LAST_VERSION}:"
 CHANGES=`mktemp`
 echo "============================================================"
-${script_home}/git-show-changes-since-last-tag | grep -v "^commit " | grep -v "Author: " | grep -v "Date: " | sed -e 's|^ *||' | tee $CHANGES
+git-show-changes-since-last-tag | grep -v "^commit " | grep -v "Author: " | grep -v "Date: " | sed -e 's|^ *||' | tee $CHANGES
 echo "============================================================"
 
 # extract new version from CMakeLists.txt
