@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+
+from github import Github
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-u", "--user", help="github.com user name")
+parser.add_argument("-p", "--password", help="github.com password")
+args = parser.parse_args()
+
+g = Github(args.user, args.password)
+
+GITHUB_DEFAULT_LABELS = ["bug", "duplicate", "enhancement", "help wanted", "invalid", "question", "wontfix",
+                         "good first issue"]
+
+CHIMERA_TK_DEFAULT_LABELS = {
+    "longterm": [
+        "Long term task which might result in subtasks and requires significant design planning",
+        "c5def5"
+    ],
+    "readyForImplementation": [
+        'This ticket has been moved to the "ready for implementation" area on the MSK software group board',
+        "fbca04"
+    ],
+    "selected": [
+        "This ticket has been selected for the MSK software group board",
+        "00eeee"
+    ],
+    "umbrella": [
+        "Meta ticket which just provides a framework for subtickets which together form a bigger task",
+        "0052cc"
+    ],
+    "umbrellaChild": [
+        "Child ticked generated from an umbrella ticket",
+        "bfdadc"
+    ],
+    "urgent": [
+        "High priority ticket",
+        "b60205"
+    ],
+    "postponed": [
+        "A ticket that has might have been postponed from being worked on for various reasons",
+        "eeee00"
+    ]
+}
+
+
+def sort_by_name(arg):
+    return sorted(arg, key=lambda x: x.name)
+
+
+org = g.get_organization("ChimeraTK")
+for repo in sort_by_name(org.get_repos()):
+    print(repo.name)
+    missing_labels = list(CHIMERA_TK_DEFAULT_LABELS.keys())
+    extra_labels = []
+    to_modify = []
+    for label in sort_by_name(repo.get_labels()):
+        if label.name in GITHUB_DEFAULT_LABELS:
+            continue
+
+        description = None
+        try:
+            description = label.description
+        except AttributeError:
+            pass
+
+        if label.name in CHIMERA_TK_DEFAULT_LABELS:
+            missing_labels.remove(label.name)
+            expected = CHIMERA_TK_DEFAULT_LABELS[label.name]
+            if label.color != expected[1] or description != expected[0]:
+                to_modify.append(label)
+
+            if label.color != expected[1]:
+                print("  {} exists but has unexpected color: \"{}\" (expected \"{}\")".format(label.name, label.color,
+                                                                                              expected[1]))
+
+            if description != expected[0]:
+                print("  {} exists but has unexpected description: \"{}\" (expected \"{}\")".format(label.name,
+                                                                                                    description,
+                                                                                                    expected[0]))
+        else:
+            extra_labels.append(label.name)
+
+    if len(missing_labels) > 0:
+        print("  Labels missing in this repository: {}".format(repr(missing_labels)))
+        for label in missing_labels:
+            print("  Adding " + label)
+            repo.create_label(label, CHIMERA_TK_DEFAULT_LABELS[label][1], CHIMERA_TK_DEFAULT_LABELS[label][0])
+
+    if len(extra_labels) > 0:
+        print("  Extra labels in this repository: {}".format(repr(extra_labels)))
+
+    if len(to_modify) > 0:
+        print("  Labels that need modification: {}".format(repr([label.name for label in to_modify])))
+        for label in to_modify:
+            print("  Modifying " + label.name)
+            label.edit(label.name, CHIMERA_TK_DEFAULT_LABELS[label.name][1], CHIMERA_TK_DEFAULT_LABELS[label.name][0])
+
+    print()

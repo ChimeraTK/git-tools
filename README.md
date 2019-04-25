@@ -19,3 +19,8 @@ Allows renaming a tag.
 Creates local branches and tags from remotes. Useful e.g. when importing a subversion repository into git.
 Known issues:
 * No safety checks done!
+
+## github-sync-labels
+Makes sure that all ChimeraTK repositories have a set of well-known labels
+Known issues:
+* Currently needs a patch to python3-github to make descriptions work: https://github.com/phako/PyGithub/commit/591078e0113b85dc68bfa1523d38ad9fc5002464
