@@ -6,6 +6,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-u", "--user", help="github.com user name")
 parser.add_argument("-p", "--password", help="github.com password")
+parser.add_argument("-n", "--dry-run", action="store_true", help="Only show what would be modified without actually doing so")
 args = parser.parse_args()
 
 g = Github(args.user, args.password)
@@ -86,7 +87,8 @@ for repo in sort_by_name(org.get_repos()):
         print("  Labels missing in this repository: {}".format(repr(missing_labels)))
         for label in missing_labels:
             print("  Adding " + label)
-            repo.create_label(label, CHIMERA_TK_DEFAULT_LABELS[label][1], CHIMERA_TK_DEFAULT_LABELS[label][0])
+            if not args.dry_run:
+                repo.create_label(label, CHIMERA_TK_DEFAULT_LABELS[label][1], CHIMERA_TK_DEFAULT_LABELS[label][0])
 
     if len(extra_labels) > 0:
         print("  Extra labels in this repository: {}".format(repr(extra_labels)))
@@ -95,6 +97,7 @@ for repo in sort_by_name(org.get_repos()):
         print("  Labels that need modification: {}".format(repr([label.name for label in to_modify])))
         for label in to_modify:
             print("  Modifying " + label.name)
-            label.edit(label.name, CHIMERA_TK_DEFAULT_LABELS[label.name][1], CHIMERA_TK_DEFAULT_LABELS[label.name][0])
+            if not args.dry_run:
+                label.edit(label.name, CHIMERA_TK_DEFAULT_LABELS[label.name][1], CHIMERA_TK_DEFAULT_LABELS[label.name][0])
 
     print()
