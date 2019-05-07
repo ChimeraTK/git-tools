@@ -42,6 +42,10 @@ CHIMERA_TK_DEFAULT_LABELS = {
     "postponed": [
         "A ticket that has might have been postponed from being worked on for various reasons",
         "eeee00"
+    ],
+    "review" : [
+        "A ticket that has been finished and should be reviewed by another developer",
+        "918ae2"
     ]
 }
 
