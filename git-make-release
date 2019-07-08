@@ -20,7 +20,7 @@ if [ -n "`git status --porcelain -uno`" ]; then
 fi
 
 # obtain the latest tag and version
-LAST_TAG=`git tag | tail -n1`
+LAST_TAG=`git describe --abbrev=0 --tags`
 echo "Last tag: ${LAST_TAG}"
 LAST_VERSION=`echo $LAST_TAG | sed -e 's|^v||'`
 echo "Last version: ${LAST_VERSION}"
