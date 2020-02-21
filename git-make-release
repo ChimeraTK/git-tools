@@ -1,6 +1,19 @@
 #!/bin/bash -e
 
 EDITOR=${EDITOR:-editor}
+RELEASE_BRANCH=0
+
+# Parse options
+OPTS=$(getopt -o b --long release-branch -n 'parse-options' -- "$@")
+eval set -- "$OPTS"
+
+while true; do
+    case "$1" in
+        -b | --release-branch ) RELEASE_BRANCH=1 ; shift ;;
+        -- ) shift; break ;;
+        * ) break ;;
+    esac
+done
 
 #
 # https://stackoverflow.com/questions/59895/get-the-source-directory-of-a-bash-script-from-within-the-script-itself
@@ -8,8 +21,9 @@ script_home=$(dirname "$(readlink -f "$0")")
 
 # make sure currently the master branch is checked out
 CURRENT_BRANCH=`git branch | grep "^*" | sed -e 's|^* ||'`
-if [ "${CURRENT_BRANCH}" != "master" ]; then
+if [ "${CURRENT_BRANCH}" != "master" -a  "x${RELEASE_BRANCH}" = "x0" ]; then
   echo "Your current branch is ${CURRENT_BRANCH} and not master. Please merge your changes into the master branch first!"
+  echo "Or did you mean to git-make-release --release-branch?"
   exit 1
 fi
 
