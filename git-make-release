@@ -34,16 +34,25 @@ if [ -n "`git status --porcelain -uno`" ]; then
 fi
 
 # obtain the latest tag and version
-LAST_TAG=`git describe --abbrev=0 --tags`
-echo "Last tag: ${LAST_TAG}"
-LAST_VERSION=`echo $LAST_TAG | sed -e 's|^v||'`
-echo "Last version: ${LAST_VERSION}"
+IS_TAGGED=1
+LAST_TAG=`git describe --abbrev=0 --tags` || IS_TAGGED=0
+if [ $IS_TAGGED == 1 ]; then
+  echo "Last tag: ${LAST_TAG}"
+  LAST_VERSION=`echo $LAST_TAG | sed -e 's|^v||'`
+  echo "Last version: ${LAST_VERSION}"
+
+  SHOW_CHANGES_COMMAND="${script_home}/git-show-changes-since-last-tag"
+else
+  LAST_VERSION="initial commit"
+  SHOW_CHANGES_COMMAND="git log --graph"
+  echo "No previous tagged version found."
+fi
 
 # obtain the change log since the latest tag
 echo "Changes since ${LAST_VERSION}:"
 CHANGES=`mktemp`
 echo "============================================================"
-${script_home}/git-show-changes-since-last-tag | grep -v "^commit " | grep -v "Author: " | grep -v "Date: " | sed -e 's|^ *||' | tee $CHANGES
+${SHOW_CHANGES_COMMAND} | grep -v "^commit " | grep -v "Author: " | grep -v "Date: " | sed -e 's|^ *||' | tee $CHANGES
 echo "============================================================"
 
 # extract new version from CMakeLists.txt
