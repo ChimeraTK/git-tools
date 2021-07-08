@@ -19,6 +19,13 @@ done
 # https://stackoverflow.com/questions/59895/get-the-source-directory-of-a-bash-script-from-within-the-script-itself
 script_home=$(dirname "$(readlink -f "$0")")
 
+if ! git rev-parse --git-dir 2>/dev/null ; then
+    echo "$PWD is not a git repository"
+    exit 1
+fi
+
+REPO_TOPLEVEL=$(git rev-parse --show-toplevel)
+
 # make sure currently the master branch is checked out
 CURRENT_BRANCH=`git branch | grep "^*" | sed -e 's|^* ||'`
 if [ "${CURRENT_BRANCH}" != "master" -a  "x${RELEASE_BRANCH}" = "x0" ]; then
@@ -56,9 +63,9 @@ ${SHOW_CHANGES_COMMAND} | grep -v "^commit " | grep -v "Author: " | grep -v "Dat
 echo "============================================================"
 
 # extract new version from CMakeLists.txt
-MAJOR=`grep -i 'set(${PROJECT_NAME}_MAJOR_VERSION' CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MAJOR_VERSION ||i' -e 's|)$||'`
-MINOR=`grep -i 'set(${PROJECT_NAME}_MINOR_VERSION' CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MINOR_VERSION ||i' -e 's|)$||'`
-PATCH=`grep -i 'set(${PROJECT_NAME}_PATCH_VERSION' CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_PATCH_VERSION ||i' -e 's|)$||'`
+MAJOR=`grep -i 'set(${PROJECT_NAME}_MAJOR_VERSION' ${REPO_TOPLEVEL}/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MAJOR_VERSION ||i' -e 's|)$||'`
+MINOR=`grep -i 'set(${PROJECT_NAME}_MINOR_VERSION' ${REPO_TOPLEVEL}/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MINOR_VERSION ||i' -e 's|)$||'`
+PATCH=`grep -i 'set(${PROJECT_NAME}_PATCH_VERSION' ${REPO_TOPLEVEL}/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_PATCH_VERSION ||i' -e 's|)$||'`
 
 # check that the new version is different from the current
 NEXT_VERSION=${MAJOR}.${MINOR}.${PATCH}
