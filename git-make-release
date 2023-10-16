@@ -55,26 +55,39 @@ else
   echo "No previous tagged version found."
 fi
 
-# obtain the change log since the latest tag
-echo "Changes since ${LAST_VERSION}:"
-CHANGES=`mktemp`
-echo "============================================================"
-${SHOW_CHANGES_COMMAND} | grep -v "^commit " | grep -v "Author: " | grep -v "Date: " | sed -e 's|^ *||' | tee $CHANGES
-echo "============================================================"
-
 # extract new version from CMakeLists.txt
 MAJOR=`grep -i 'set(${PROJECT_NAME}_MAJOR_VERSION' ${REPO_TOPLEVEL}/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MAJOR_VERSION ||i' -e 's|)$||'`
 MINOR=`grep -i 'set(${PROJECT_NAME}_MINOR_VERSION' ${REPO_TOPLEVEL}/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MINOR_VERSION ||i' -e 's|)$||'`
 PATCH=`grep -i 'set(${PROJECT_NAME}_PATCH_VERSION' ${REPO_TOPLEVEL}/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_PATCH_VERSION ||i' -e 's|)$||'`
 
-# check that the new version is different from the current
+if [ -z "$MAJOR" -o -z "$MINOR" -o -z "$PATCH" ]; then
+  echo "Cannot detect version from CMakeLists.txt!"
+  echo -n "Enter new MAJOR version: "
+  read MAJOR
+  echo -n "Enter new MINOR version: "
+  read MINOR
+  echo -n "Enter new PATCH version: "
+  read PATCH
+  if (( MAJOR < 10 )); then
+    MAJOR=0$MAJOR
+  fi
+  if (( MINOR < 10 )); then
+    MINOR=0$MINOR
+  fi
+  if (( PATCH < 10 )); then
+    PATCH=0$PATCH
+  fi
+fi
+
 NEXT_VERSION=${MAJOR}.${MINOR}.${PATCH}
+echo "The new version will be: ${NEXT_VERSION}"
+
+# check that the new version is different from the current
 if [ "$NEXT_VERSION" == "$LAST_VERSION" ]; then
   echo "The version in CMakeLists.txt is the same as the last tag. Please update first!"
   rm -f $CHANGES
   exit 1
 fi
-echo "The new version will be: ${NEXT_VERSION}"
 
 # build next tag
 if [ "${LAST_TAG:0:1}" == "v" ]; then
@@ -98,8 +111,28 @@ elif [ "${LAST_VERSION_ARRAY[1]}" != "${MINOR}" ]; then
     echo "*** Warning: Minor release, but patch is not zero!"
   fi
 fi
+if [[ "${CURRENT_BRANCH}" != "master" ]]; then
+  RELEASE_TYPE="BACKPORT"
+fi
 
 echo "Release type: ${RELEASE_TYPE}"
+
+# obtain the change log since the latest tag
+CHANGES=`mktemp`
+git log ${LAST_VERSION}..HEAD --pretty=%s | grep -v '^project-template:' | grep -v '(project-template): '           \
+  | grep -v '^Merge pull request ' | grep -v '^Merge branch ' | grep -v '^Merge project-template (automated)'       \
+  | awk '{print "- " $0}' > $CHANGES
+
+# prepend header to the changelog
+CHANGES_WITH_HEADER=`mktemp`
+echo "New ${RELEASE_TYPE} release ${NEXT_VERSION}" > $CHANGES_WITH_HEADER
+echo "" >> $CHANGES_WITH_HEADER
+echo "Changes since ${LAST_VERSION}:" >> $CHANGES_WITH_HEADER
+echo "" >> $CHANGES_WITH_HEADER
+cat $CHANGES >> $CHANGES_WITH_HEADER
+
+# edit the changelog
+${EDITOR} ${CHANGES_WITH_HEADER}
 
 # ask whether to proceed
 echo ""
@@ -111,19 +144,8 @@ if [ "$ANSWER" != "y" ]; then
   exit 1
 fi
 
-# prepend header to the changelog
-CHANGES_WITH_HEADER=`mktemp`
-echo "New ${RELEASE_TYPE} release ${NEXT_VERSION}" > $CHANGES_WITH_HEADER
-echo "" >> $CHANGES_WITH_HEADER
-echo "Changes since ${LAST_VERSION}:" >> $CHANGES_WITH_HEADER
-cat $CHANGES >> $CHANGES_WITH_HEADER
-
-# edit the changelog
-${EDITOR} ${CHANGES_WITH_HEADER}
-
 # now make the tag
 git tag -a ${NEXT_TAG} -F ${CHANGES_WITH_HEADER}
 
 # delete the changelog files
 rm -f $CHANGES $CHANGES_WITH_HEADER
-
