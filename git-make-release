@@ -28,7 +28,7 @@ REPO_TOPLEVEL=$(git rev-parse --show-toplevel)
 
 # make sure currently the master branch is checked out
 CURRENT_BRANCH=`git branch | grep "^*" | sed -e 's|^* ||'`
-if [ "${CURRENT_BRANCH}" != "master" -a  "x${RELEASE_BRANCH}" = "x0" ]; then
+if [ "${CURRENT_BRANCH}" != "master" ] && [ "${CURRENT_BRANCH}" != "main" ] && [  "x${RELEASE_BRANCH}" = "x0" ]; then
   echo "Your current branch is ${CURRENT_BRANCH} and not master. Please merge your changes into the master branch first!"
   echo "Or did you mean to git-make-release --release-branch?"
   exit 1
@@ -111,7 +111,7 @@ elif [ "${LAST_VERSION_ARRAY[1]}" != "${MINOR}" ]; then
     echo "*** Warning: Minor release, but patch is not zero!"
   fi
 fi
-if [[ "${CURRENT_BRANCH}" != "master" ]]; then
+if [[ "${CURRENT_BRANCH}" != "master" ]] && [[ "${CURRENT_BRANCH}" != "main" ]]; then
   RELEASE_TYPE="BACKPORT"
 fi
 
