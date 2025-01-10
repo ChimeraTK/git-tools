@@ -45,25 +45,25 @@ fi
 REPO_TOPLEVEL=$(git rev-parse --show-toplevel)
 
 # make sure currently the master branch is checked out
-CURRENT_BRANCH=`git branch | grep "^*" | sed -e 's|^* ||'`
-if [ "${CURRENT_BRANCH}" != "master" ] && [ "${CURRENT_BRANCH}" != "main" ] && [  "x${RELEASE_BRANCH}" = "x0" ]; then
+CURRENT_BRANCH=$(git branch | grep "^*" | sed -e 's|^* ||')
+if [ "${CURRENT_BRANCH}" != "master" ] && [ "${CURRENT_BRANCH}" != "main" ] && [  "${RELEASE_BRANCH}" = "0" ]; then
   echo "Your current branch is ${CURRENT_BRANCH} and not master. Please merge your changes into the master branch first!"
   echo "Or did you mean to git-make-release --release-branch?"
   exit 1
 fi
 
 # check for uncommitted changes
-if [ -n "`git status --porcelain -uno`" ]; then
+if [ -n "$(git status --porcelain -uno)" ]; then
   echo "You have uncommitted changes in your working copy. Please commit everything first!"
   exit 1
 fi
 
 # obtain the latest tag and version
 IS_TAGGED=1
-LAST_TAG=`git describe --abbrev=0 --tags` || IS_TAGGED=0
+LAST_TAG=$(git describe --abbrev=0 --tags) || IS_TAGGED=0
 if [ $IS_TAGGED == 1 ]; then
   echo "Last tag: ${LAST_TAG}"
-  LAST_VERSION=`echo $LAST_TAG | sed -e 's|^v||'`
+  LAST_VERSION=$(echo "$LAST_TAG" | sed -e 's|^v||')
   echo "Last version: ${LAST_VERSION}"
 
   SHOW_CHANGES_COMMAND="${script_home}/git-show-changes-since-last-tag"
@@ -74,9 +74,9 @@ else
 fi
 
 # extract version from CMakeLists.txt
-MAJOR=`grep -i 'set(${PROJECT_NAME}_MAJOR_VERSION' ${REPO_TOPLEVEL}/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MAJOR_VERSION ||i' -e 's|)$||'`
-MINOR=`grep -i 'set(${PROJECT_NAME}_MINOR_VERSION' ${REPO_TOPLEVEL}/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MINOR_VERSION ||i' -e 's|)$||'`
-PATCH=`grep -i 'set(${PROJECT_NAME}_PATCH_VERSION' ${REPO_TOPLEVEL}/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_PATCH_VERSION ||i' -e 's|)$||'`
+MAJOR=$(grep -i 'set(${PROJECT_NAME}_MAJOR_VERSION' "${REPO_TOPLEVEL}"/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MAJOR_VERSION ||i' -e 's|)$||')
+MINOR=$(grep -i 'set(${PROJECT_NAME}_MINOR_VERSION' "${REPO_TOPLEVEL}"/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MINOR_VERSION ||i' -e 's|)$||')
+PATCH=$(grep -i 'set(${PROJECT_NAME}_PATCH_VERSION' "${REPO_TOPLEVEL}"/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_PATCH_VERSION ||i' -e 's|)$||')
 
 # check if we could extract the version from CMakeLists.txt, enter it manually otherwise
 if [ -z "$MAJOR" -o -z "$MINOR" -o -z "$PATCH" ]; then
@@ -86,11 +86,11 @@ if [ -z "$MAJOR" -o -z "$MINOR" -o -z "$PATCH" ]; then
     exit 1
   fi
   echo -n "Enter new MAJOR version: "
-  read MAJOR
+  read -r MAJOR
   echo -n "Enter new MINOR version: "
-  read MINOR
+  read -r MINOR
   echo -n "Enter new PATCH version: "
-  read PATCH
+  read -r PATCH
 fi
 
 # strip leading 0 from MAJOR, MINOR and PATCH
@@ -121,27 +121,27 @@ echo "The new version will be: ${NEXT_VERSION}"
 # check that the new version is different from the current
 if [ "$NEXT_VERSION" == "$LAST_VERSION" ]; then
   echo "The version in CMakeLists.txt is the same as the last tag. Please update first!"
-  rm -f $CHANGES
+  rm -f "$CHANGES"
   exit 1
 fi
 
 # write new version to CMakeLists.txt, if --patch, --minor or --major was given
-if [ "${RELEASE_PATCH}" = "1" -o "${RELEASE_MINOR}" = "1" -o "${RELEASE_MAJOR}" = "1" ]; then
-  sed -i ${REPO_TOPLEVEL}/CMakeLists.txt \
+if [ "${RELEASE_PATCH}" = "1" ] || [ "${RELEASE_MINOR}" = "1" ] || [ "${RELEASE_MAJOR}" = "1" ]; then
+  sed -i "${REPO_TOPLEVEL}"/CMakeLists.txt \
     -e "s|set(\${PROJECT_NAME}_MAJOR_VERSION .*|set(\${PROJECT_NAME}_MAJOR_VERSION ${MAJOR})|i"
-  sed -i ${REPO_TOPLEVEL}/CMakeLists.txt \
+  sed -i "${REPO_TOPLEVEL}"/CMakeLists.txt \
     -e "s|set(\${PROJECT_NAME}_MINOR_VERSION .*|set(\${PROJECT_NAME}_MINOR_VERSION ${MINOR})|i"
-  sed -i ${REPO_TOPLEVEL}/CMakeLists.txt \
+  sed -i "${REPO_TOPLEVEL}"/CMakeLists.txt \
     -e "s|set(\${PROJECT_NAME}_PATCH_VERSION .*|set(\${PROJECT_NAME}_PATCH_VERSION ${PATCH})|i"
 
   # commit the version bump
-  git checkout -b ${USER}/version-bump-${NEXT_VERSION}
-  git add ${REPO_TOPLEVEL}/CMakeLists.txt
+  git checkout -b "${USER}/version-bump-${NEXT_VERSION}"
+  git add "${REPO_TOPLEVEL}"/CMakeLists.txt
   git commit -m "chore: Bump version to ${NEXT_VERSION}"
   git push
 
   # check if repo is on github or gitlab, then create a PR/MR using the glab/gh CLI
-  origin=`git remote get-url origin`
+  origin=$(git remote get-url origin)
   if [[ $origin = *gitlab* ]]; then
     glab mr create --title "chore: Bump version to ${NEXT_VERSION}" --description "This MR bumps the version to ${NEXT_VERSION}" --target-branch master
   elif [[ $origin = *github* ]]; then
@@ -153,7 +153,7 @@ if [ "${RELEASE_PATCH}" = "1" -o "${RELEASE_MINOR}" = "1" -o "${RELEASE_MAJOR}" 
 
   # ask whether to merge the MR/PR and do so via the CLI
   echo -n "Do you want to merge the PR/MR (y/N)? "
-  read ANSWER
+  read -r ANSWER
   if [ "${ANSWER,,}" != "y" ]; then
     echo "Aborted."
     exit 1
@@ -168,10 +168,10 @@ if [ "${RELEASE_PATCH}" = "1" -o "${RELEASE_MINOR}" = "1" -o "${RELEASE_MAJOR}" 
   fi
 
   # switch back to previous branch and delete the version bump branch
-  git checkout ${CURRENT_BRANCH}
+  git checkout "${CURRENT_BRANCH}"
   git pull
   if [[ $origin = *gitlab* ]]; then
-    git branch -d ${USER}/version-bump-${NEXT_VERSION}
+    git branch -d "${USER}/version-bump-${NEXT_VERSION}"
   fi
 fi
 
@@ -188,7 +188,7 @@ IFS='.' read -r -a LAST_VERSION_ARRAY <<< "$LAST_VERSION"
 RELEASE_TYPE="PATCH"
 if [ "${LAST_VERSION_ARRAY[0]}" != "${MAJOR}" ]; then
   RELEASE_TYPE="MAJOR"
-  if [ "${MINOR}" -ne 0 -o "${PATCH}" -ne 0 ]; then
+  if [ "${MINOR}" -ne 0 ] || [ "${PATCH}" -ne 0 ]; then
     echo "*** Warning: Major release, but minor and patch is not zero!"
   fi
 elif [ "${LAST_VERSION_ARRAY[1]}" != "${MINOR}" ]; then
@@ -204,42 +204,44 @@ fi
 echo "Release type: ${RELEASE_TYPE}"
 
 # obtain the change log since the latest tag
-CHANGES=`mktemp`
-git log ${LAST_VERSION}..HEAD --pretty=%s | grep -v '^project-template:' | grep -v '(project-template): '           \
+CHANGES=$(mktemp)
+git log "${LAST_VERSION}"..HEAD --pretty=%s | grep -v '^project-template:' | grep -v '(project-template): '           \
   | grep -v '^Merge pull request ' | grep -v '^Merge branch ' | grep -v '^Merge project-template (automated)'       \
   | grep -v '^chore: Bump version to '                                                                              \
-  | awk '{print "- " $0}' > $CHANGES
+  | awk '{print "- " $0}' > "$CHANGES"
 
 # prepend header to the changelog
-CHANGES_WITH_HEADER=`mktemp`
-echo "New ${RELEASE_TYPE} release ${NEXT_VERSION}" > $CHANGES_WITH_HEADER
-echo "" >> $CHANGES_WITH_HEADER
-echo "Changes since ${LAST_VERSION}:" >> $CHANGES_WITH_HEADER
-echo "" >> $CHANGES_WITH_HEADER
-cat $CHANGES >> $CHANGES_WITH_HEADER
+CHANGES_WITH_HEADER=$(mktemp)
+{
+  echo "New ${RELEASE_TYPE} release ${NEXT_VERSION}"
+  echo ""
+  echo "Changes since ${LAST_VERSION}:"
+  echo ""
+  cat "$CHANGES"
+} > "$CHANGES_WITH_HEADER"
 
 # edit the changelog
-${EDITOR} ${CHANGES_WITH_HEADER}
+"${EDITOR}" "${CHANGES_WITH_HEADER}"
 
 # ask whether to proceed
 echo ""
 echo -n "Do you want to proceed with creating the tag (y/N)? "
-read ANSWER
+read -r ANSWER
 if [ "$ANSWER" != "y" ]; then
   echo "Aborted."
-  rm -f $CHANGES
+  rm -f "$CHANGES"
   exit 1
 fi
 
 # now make the tag
-git tag -a ${NEXT_TAG} -F ${CHANGES_WITH_HEADER}
+git tag -a "${NEXT_TAG}" -F "${CHANGES_WITH_HEADER}"
 
 # delete the changelog files
-rm -f $CHANGES $CHANGES_WITH_HEADER
+rm -f "$CHANGES" "$CHANGES_WITH_HEADER"
 
 # push the tag after user confirmation
 echo -n "Do you want to push the tag to the remote repository (y/N)? "
-read ANSWER
+read -r ANSWER
 if [ "$ANSWER" != "y" ]; then
   echo "Aborted."
   exit 1
