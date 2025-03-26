@@ -138,7 +138,7 @@ if [ "${RELEASE_PATCH}" = "1" ] || [ "${RELEASE_MINOR}" = "1" ] || [ "${RELEASE_
   git checkout -b "${USER}/version-bump-${NEXT_VERSION}"
   git add "${REPO_TOPLEVEL}"/CMakeLists.txt
   git commit -m "chore: Bump version to ${NEXT_VERSION}"
-  git push
+  git push --set-upstream origin "${USER}/version-bump-${NEXT_VERSION}"
 
   # check if repo is on github or gitlab, then create a PR/MR using the glab/gh CLI
   origin=$(git remote get-url origin)
