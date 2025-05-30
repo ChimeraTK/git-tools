@@ -1,0 +1,50 @@
+#!/bin/bash -e
+
+TARGET_BRANCH=$( git default-branch )
+
+echo "Push the following commits to ${TARGET_BRANCH} via a scripted MR/PR:"
+git log --oneline "origin/${TARGET_BRANCH}..HEAD"
+
+N_COMMITS=$( git log --oneline "origin/${TARGET_BRANCH}..HEAD" | wc -l )
+if [ "$N_COMMITS" -eq 0 ]; then
+  echo "*** No commits to push to ${TARGET_BRANCH}"
+  exit 1
+fi
+
+BR="${USER}/push-with-pr"
+git push origin "HEAD:${BR}"
+
+# check if repo is on github or gitlab, then create a PR/MR using the glab/gh CLI
+origin=$(git remote get-url origin)
+descr="Scripted MR/PR to merge to ${TARGET_BRANCH}"
+if [[ $origin = *gitlab* ]]; then
+  glab mr create --source-branch "${BR}" --title "${descr}" --description "${descr}" --target-branch "${TARGET_BRANCH}"
+elif [[ $origin = *github* ]]; then
+  gh pr create --head "${BR}" --title "${descr}" --body "${descr}" --base "${TARGET_BRANCH}"
+else
+  echo "No gitlab or github remote found, please create a PR/MR manually."
+  exit 1
+fi
+
+# ask whether to merge the MR/PR
+if [ "$1" != "-y" ]; then
+  echo -n "Do you want to merge the PR/MR without review (y/N)? "
+  read -r ANSWER
+  if [ "${ANSWER,,}" != "y" ]; then
+    echo "Aborted."
+    exit 1
+  fi
+fi
+
+# merge MR/PR via CLI
+if [[ $origin = *gitlab* ]]; then
+  glab mr merge --rebase --remove-source-branch --yes "${BR}"
+elif [[ $origin = *github* ]]; then
+  gh pr merge --rebase --delete-branch "${BR}"
+else
+  echo "We should never end up here!"
+  exit 1
+fi
+
+# pull the merged changes with rebase, so the changed commit ID in GitHub creates no problems
+git pull --rebase
