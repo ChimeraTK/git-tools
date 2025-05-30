@@ -1,0 +1,50 @@
+#!/bin/bash -e
+
+if ! which chronic > /dev/null; then
+  echo "chronic not found, install moreutils package:"
+  echo "  apt-get install moreutils"
+  exit 1
+fi
+
+default_branch=$(git default-branch)
+
+branches=$( git branch -a | sed -e 's/^\*//' -e 's/^ *//' -e 's/ .*//' )
+
+for branch in $branches; do
+
+  if [ "${branch}" == "remotes/origin/${default_branch}" ] || [ "${branch}" == "temp/git-delete-merged-branches" ]  \
+     || [ "${branch}" == "${default_branch}" ] || [[ "${branch}" == *HEAD* ]]; then
+    continue
+  fi
+
+  echo "====== ${branch}"
+  chronic git checkout "${branch}"
+  git branch -D temp/git-delete-merged-branches > /dev/null 2>&1 || true
+  chronic git checkout -b temp/git-delete-merged-branches
+
+  if ! git rebase "remotes/origin/${default_branch}"; then
+    # rebase is not finished
+    echo "!!! Rebase failed, manual check required."
+    git rebase --abort
+    continue
+  fi
+
+  NCH=$( git show-unmerged-commits | wc -l )
+  if [ "$NCH" != "0" ]; then
+    echo "Branch needs merging!"
+  else
+    read -r -p "Branch seems to be merged to ${default_branch}. Delete it (y/N)? " answer
+    if [ "$answer" == "y" ] || [ "$answer" == "Y" ]; then
+      if [[ "${branch}" == remote/origin/* ]]; then
+        git push --delete origin "${branch}"
+      else
+        git checkout "${default_branch}"
+        git branch -D "${branch}"
+      fi
+    fi
+  fi
+
+done
+
+git checkout "${default_branch}"
+git branch -D temp/git-delete-merged-branches
