@@ -142,10 +142,11 @@ if [ "${RELEASE_PATCH}" = "1" ] || [ "${RELEASE_MINOR}" = "1" ] || [ "${RELEASE_
 
   # check if repo is on github or gitlab, then create a PR/MR using the glab/gh CLI
   origin=$(git remote get-url origin)
+  target_branch=$(git default-branch)
   if [[ $origin = *gitlab* ]]; then
-    glab mr create --title "chore: Bump version to ${NEXT_VERSION}" --description "This MR bumps the version to ${NEXT_VERSION}" --target-branch master
+    glab mr create --title "chore: Bump version to ${NEXT_VERSION}" --description "This MR bumps the version to ${NEXT_VERSION}" --target-branch "${target_branch}"
   elif [[ $origin = *github* ]]; then
-    gh pr create --title "chore: Bump version to ${NEXT_VERSION}" --body "This PR bumps the version to ${NEXT_VERSION}" --base master
+    gh pr create --title "chore: Bump version to ${NEXT_VERSION}" --body "This PR bumps the version to ${NEXT_VERSION}" --base "${target_branch}"
   else
     echo "No gitlab or github remote found, please create a PR/MR manually."
     exit
