@@ -1,2 +1,24 @@
-#!/bin/bash
-git log --graph $@ $( git show tags/`git tag | tail -n1` | grep "^commit " | sed -e 's|^commit ||' )..HEAD
+#!/bin/bash -e
+
+GIT_ARGS=""
+FILTERED=0
+
+# check if "-f" or "--filtered" is found at command line, pass all other args directly to git
+for var in "$@"; do
+  if [ "$var" == "-f" ] || [ "$var" == "--filtered" ]; then
+    FILTERED=1
+  else
+    GIT_ARGS="$GIT_ARGS $var"
+  fi
+done
+
+LAST_TAG=$(git describe --abbrev=0 --tags)
+
+if [ $FILTERED -eq 1 ]; then
+  git log ${GIT_ARGS} "${LAST_TAG}"..HEAD --pretty=%s | grep -v '^project-template:' | grep -v '(project-template): '  \
+    | grep -v '^Merge pull request ' | grep -v '^Merge branch ' | grep -v '^Merge project-template (automated)'        \
+    | grep -v '^chore: Bump version to '                                                                               \
+    | awk '{print "- " $0}' | less
+else
+  git log --graph ${GIT_ARGS} "$( git show "tags/${LAST_TAG}" | grep "^commit " | sed -e 's|^commit ||' )..HEAD"
+fi

@@ -206,10 +206,7 @@ echo "Release type: ${RELEASE_TYPE}"
 
 # obtain the change log since the latest tag
 CHANGES=$(mktemp)
-git log "${LAST_VERSION}"..HEAD --pretty=%s | grep -v '^project-template:' | grep -v '(project-template): '           \
-  | grep -v '^Merge pull request ' | grep -v '^Merge branch ' | grep -v '^Merge project-template (automated)'       \
-  | grep -v '^chore: Bump version to '                                                                              \
-  | awk '{print "- " $0}' > "$CHANGES"
+git show-changes-since-last-tag --filtered > "$CHANGES"
 
 # prepend header to the changelog
 CHANGES_WITH_HEADER=$(mktemp)
