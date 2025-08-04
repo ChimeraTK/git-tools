@@ -73,10 +73,10 @@ else
   echo "No previous tagged version found."
 fi
 
-# extract version from CMakeLists.txt
-MAJOR=$(grep -i 'set(${PROJECT_NAME}_MAJOR_VERSION' "${REPO_TOPLEVEL}"/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MAJOR_VERSION ||i' -e 's|)$||')
-MINOR=$(grep -i 'set(${PROJECT_NAME}_MINOR_VERSION' "${REPO_TOPLEVEL}"/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_MINOR_VERSION ||i' -e 's|)$||')
-PATCH=$(grep -i 'set(${PROJECT_NAME}_PATCH_VERSION' "${REPO_TOPLEVEL}"/CMakeLists.txt | sed -e 's|^set(${PROJECT_NAME}_PATCH_VERSION ||i' -e 's|)$||')
+# extract version from CMakeLists.txt (xargs is used to trim the string)
+MAJOR=$(grep -i 'set( *${PROJECT_NAME}_MAJOR_VERSION' "${REPO_TOPLEVEL}"/CMakeLists.txt | sed -e 's|^set( *${PROJECT_NAME}_MAJOR_VERSION ||i' -e 's|)$||' | xargs)
+MINOR=$(grep -i 'set( *${PROJECT_NAME}_MINOR_VERSION' "${REPO_TOPLEVEL}"/CMakeLists.txt | sed -e 's|^set( *${PROJECT_NAME}_MINOR_VERSION ||i' -e 's|)$||' | xargs)
+PATCH=$(grep -i 'set( *${PROJECT_NAME}_PATCH_VERSION' "${REPO_TOPLEVEL}"/CMakeLists.txt | sed -e 's|^set( *${PROJECT_NAME}_PATCH_VERSION ||i' -e 's|)$||' | xargs)
 
 # check if we could extract the version from CMakeLists.txt, enter it manually otherwise
 if [ -z "$MAJOR" -o -z "$MINOR" -o -z "$PATCH" ]; then
@@ -128,11 +128,11 @@ fi
 # write new version to CMakeLists.txt, if --patch, --minor or --major was given
 if [ "${RELEASE_PATCH}" = "1" ] || [ "${RELEASE_MINOR}" = "1" ] || [ "${RELEASE_MAJOR}" = "1" ]; then
   sed -i "${REPO_TOPLEVEL}"/CMakeLists.txt \
-    -e "s|set(\${PROJECT_NAME}_MAJOR_VERSION .*|set(\${PROJECT_NAME}_MAJOR_VERSION ${MAJOR})|i"
+    -e "s|set( *\${PROJECT_NAME}_MAJOR_VERSION .*|set(\${PROJECT_NAME}_MAJOR_VERSION ${MAJOR})|i"
   sed -i "${REPO_TOPLEVEL}"/CMakeLists.txt \
-    -e "s|set(\${PROJECT_NAME}_MINOR_VERSION .*|set(\${PROJECT_NAME}_MINOR_VERSION ${MINOR})|i"
+    -e "s|set( *\${PROJECT_NAME}_MINOR_VERSION .*|set(\${PROJECT_NAME}_MINOR_VERSION ${MINOR})|i"
   sed -i "${REPO_TOPLEVEL}"/CMakeLists.txt \
-    -e "s|set(\${PROJECT_NAME}_PATCH_VERSION .*|set(\${PROJECT_NAME}_PATCH_VERSION ${PATCH})|i"
+    -e "s|set( *\${PROJECT_NAME}_PATCH_VERSION .*|set(\${PROJECT_NAME}_PATCH_VERSION ${PATCH})|i"
 
   # commit the version bump
   git checkout -b "${USER}/version-bump-${NEXT_VERSION}"
