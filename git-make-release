@@ -33,11 +33,7 @@ if [ $((RELEASE_PATCH + RELEASE_MINOR + RELEASE_MAJOR)) -gt 0 -a $RELEASE_BRANCH
   exit 1
 fi
 
-#
-# https://stackoverflow.com/questions/59895/get-the-source-directory-of-a-bash-script-from-within-the-script-itself
-script_home=$(dirname "$(readlink -f "$0")")
-
-if ! git rev-parse --git-dir 2>/dev/null ; then
+if ! git rev-parse --git-dir > /dev/null 2>&1 ; then
     echo "$PWD is not a git repository"
     exit 1
 fi
@@ -60,13 +56,13 @@ fi
 
 # obtain the latest tag and version
 IS_TAGGED=1
-LAST_TAG=$(git describe --abbrev=0 --tags) || IS_TAGGED=0
+LAST_TAG=$(git describe --abbrev=0 --tags 2>/dev/null) || IS_TAGGED=0
 if [ $IS_TAGGED == 1 ]; then
   echo "Last tag: ${LAST_TAG}"
   LAST_VERSION=$(echo "$LAST_TAG" | sed -e 's|^v||')
   echo "Last version: ${LAST_VERSION}"
 
-  SHOW_CHANGES_COMMAND="${script_home}/git-show-changes-since-last-tag"
+  SHOW_CHANGES_COMMAND="${script_home}/git-show-changes-since-last-tag --filtered"
 else
   LAST_VERSION="initial commit"
   SHOW_CHANGES_COMMAND="git log --graph"
@@ -205,18 +201,28 @@ fi
 echo "Release type: ${RELEASE_TYPE}"
 
 # obtain the change log since the latest tag
-CHANGES=$(mktemp)
-git show-changes-since-last-tag --filtered > "$CHANGES"
+if [ $IS_TAGGED == 1 ]; then
+  CHANGES=$(mktemp)
+  git show-changes-since-last-tag --filtered > "$CHANGES"
 
-# prepend header to the changelog
-CHANGES_WITH_HEADER=$(mktemp)
-{
-  echo "New ${RELEASE_TYPE} release ${NEXT_VERSION}"
-  echo ""
-  echo "Changes since ${LAST_VERSION}:"
-  echo ""
-  cat "$CHANGES"
-} > "$CHANGES_WITH_HEADER"
+  # prepend header to the changelog
+  CHANGES_WITH_HEADER=$(mktemp)
+  {
+    echo "New ${RELEASE_TYPE} release ${NEXT_VERSION}"
+    echo ""
+    echo "Changes since ${LAST_VERSION}:"
+    echo ""
+    cat "$CHANGES"
+  } > "$CHANGES_WITH_HEADER"
+
+else
+
+  CHANGES_WITH_HEADER=$(mktemp)
+  {
+    echo "INITIAL release ${NEXT_VERSION}"
+  } > "$CHANGES_WITH_HEADER"
+
+fi
 
 # edit the changelog
 "${EDITOR}" "${CHANGES_WITH_HEADER}"
@@ -227,7 +233,7 @@ echo -n "Do you want to proceed with creating the tag (y/N)? "
 read -r ANSWER
 if [ "$ANSWER" != "y" ]; then
   echo "Aborted."
-  rm -f "$CHANGES"
+  rm -f "$CHANGES" "$CHANGES_WITH_HEADER"
   exit 1
 fi
 
