@@ -130,6 +130,24 @@ if [ "${RELEASE_PATCH}" = "1" ] || [ "${RELEASE_MINOR}" = "1" ] || [ "${RELEASE_
   sed -i "${REPO_TOPLEVEL}"/CMakeLists.txt \
     -e "s|set( *\${PROJECT_NAME}_PATCH_VERSION .*|set(\${PROJECT_NAME}_PATCH_VERSION ${PATCH})|i"
 
+  # make sure the version bump branch does not exist locally nor on the remote
+  if git rev-parse --verify "${USER}/version-bump-${NEXT_VERSION}" &> /dev/null ; then
+    echo -n "The branch '${USER}/version-bump-${NEXT_VERSION}' already exists LOCALLY. Shall I delete it first (y/N)? "
+    read -r YES_NO
+    if [ "$YES_NO" != "y" ] && [ "$YES_NO" != "Y" ]; then
+      exit 1
+    fi
+    git branch -D "${USER}/version-bump-${NEXT_VERSION}"
+  fi
+  if git ls-remote --exit-code --heads origin "${USER}/version-bump-${NEXT_VERSION}" > /dev/null; then
+    echo -n "The branch '${USER}/version-bump-${NEXT_VERSION}' already exists on the REMOTE origin. Shall I delete it first (y/N)? "
+    read -r YES_NO
+    if [ "$YES_NO" != "y" ] && [ "$YES_NO" != "Y" ]; then
+      exit 1
+    fi
+    git push --delete origin "${USER}/version-bump-${NEXT_VERSION}"
+  fi
+
   # commit the version bump
   git checkout -b "${USER}/version-bump-${NEXT_VERSION}"
   git add "${REPO_TOPLEVEL}"/CMakeLists.txt
