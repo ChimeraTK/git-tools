@@ -5,6 +5,7 @@ RELEASE_BRANCH=0
 RELEASE_PATCH=0
 RELEASE_MINOR=0
 RELEASE_MAJOR=0
+BUMP_KIND=""
 
 # Parse options
 OPTS=$(getopt -o b,p,m,M --long release-branch,patch,minor,major -n 'parse-options' -- "$@")
@@ -13,9 +14,9 @@ eval set -- "$OPTS"
 while true; do
     case "$1" in
         -b | --release-branch ) RELEASE_BRANCH=1 ; shift ;;
-        -p | --patch ) RELEASE_PATCH=1 ; shift ;;
-        -m | --minor ) RELEASE_MINOR=1 ; shift ;;
-        -M | --major ) RELEASE_MAJOR=1 ; shift ;;
+    -p | --patch ) RELEASE_PATCH=1 ; BUMP_KIND="patch" ; shift ;;
+    -m | --minor ) RELEASE_MINOR=1 ; BUMP_KIND="minor" ; shift ;;
+    -M | --major ) RELEASE_MAJOR=1 ; BUMP_KIND="major" ; shift ;;
         -- ) shift; break ;;
         * ) break ;;
     esac
@@ -121,6 +122,16 @@ if [ "$NEXT_VERSION" == "$LAST_VERSION" ]; then
   exit 1
 fi
 
+# For requested automatic version bumps, confirm once before creating branch/MR/PR.
+if [ "${RELEASE_PATCH}" = "1" ] || [ "${RELEASE_MINOR}" = "1" ] || [ "${RELEASE_MAJOR}" = "1" ]; then
+  echo -n "Do you want to create and merge a ${BUMP_KIND} version bump to ${NEXT_VERSION} (y/N)? "
+  read -r ANSWER
+  if [ "${ANSWER,,}" != "y" ]; then
+    echo "Aborted."
+    exit 1
+  fi
+fi
+
 # write new version to CMakeLists.txt, if --patch, --minor or --major was given
 if [ "${RELEASE_PATCH}" = "1" ] || [ "${RELEASE_MINOR}" = "1" ] || [ "${RELEASE_MAJOR}" = "1" ]; then
   sed -i "${REPO_TOPLEVEL}"/CMakeLists.txt \
@@ -154,38 +165,13 @@ if [ "${RELEASE_PATCH}" = "1" ] || [ "${RELEASE_MINOR}" = "1" ] || [ "${RELEASE_
   git commit -m "chore: Bump version to ${NEXT_VERSION}"
   git push --set-upstream origin "${USER}/version-bump-${NEXT_VERSION}"
 
-  # check if repo is on github or gitlab, then create a PR/MR using the glab/gh CLI
-  origin=$(git remote get-url origin)
-  target_branch=$(git default-branch)
-  if [[ $origin = *gitlab* ]]; then
-    glab mr create --title "chore: Bump version to ${NEXT_VERSION}" --description "This MR bumps the version to ${NEXT_VERSION}" --target-branch "${target_branch}"
-  elif [[ $origin = *github* ]]; then
-    gh pr create --title "chore: Bump version to ${NEXT_VERSION}" --body "This PR bumps the version to ${NEXT_VERSION}" --base "${target_branch}"
-  else
-    echo "No gitlab or github remote found, please create a PR/MR manually."
-    exit
-  fi
-
-  # ask whether to merge the MR/PR and do so via the CLI
-  echo -n "Do you want to merge the PR/MR (y/N)? "
-  read -r ANSWER
-  if [ "${ANSWER,,}" != "y" ]; then
-    echo "Aborted."
-    exit 1
-  fi
-  if [[ $origin = *gitlab* ]]; then
-    glab mr merge -r -d
-  elif [[ $origin = *github* ]]; then
-    gh pr merge -r -d
-  else
-    echo "We should never end up here!"
-    exit 1
-  fi
+  # Reuse the generic helper for PR/MR creation + merge.
+  git push-with-pr -y --branch "${USER}/version-bump-${NEXT_VERSION}" --skip-pull
 
   # switch back to previous branch and delete the version bump branch
   git checkout "${CURRENT_BRANCH}"
   git pull
-  if [[ $origin = *gitlab* ]]; then
+  if [[ $(git remote get-url origin) = *gitlab* ]]; then
     git branch -d "${USER}/version-bump-${NEXT_VERSION}"
   fi
 fi

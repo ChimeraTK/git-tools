@@ -1,5 +1,34 @@
 #!/bin/bash -e
 
+AUTO_YES=0
+SKIP_PULL=0
+BR="${USER}/push-with-pr"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -y )
+      AUTO_YES=1
+      shift
+      ;;
+    -b | --branch )
+      if [ -z "$2" ]; then
+        echo "Missing argument for $1"
+        exit 1
+      fi
+      BR="$2"
+      shift 2
+      ;;
+    --skip-pull )
+      SKIP_PULL=1
+      shift
+      ;;
+    * )
+      echo "Usage: git push-with-pr [-y] [-b|--branch <branch>] [--skip-pull]"
+      exit 1
+      ;;
+  esac
+done
+
 TARGET_BRANCH=$( git default-branch )
 
 echo "Push the following commits to ${TARGET_BRANCH} via a scripted MR/PR:"
@@ -11,7 +40,6 @@ if [ "$N_COMMITS" -eq 0 ]; then
   exit 1
 fi
 
-BR="${USER}/push-with-pr"
 git push origin "HEAD:${BR}"
 
 # check if repo is on github or gitlab, then create a PR/MR using the glab/gh CLI
@@ -27,7 +55,7 @@ else
 fi
 
 # ask whether to merge the MR/PR
-if [ "$1" != "-y" ]; then
+if [ "${AUTO_YES}" != "1" ]; then
   echo -n "Do you want to merge the PR/MR without review (y/N)? "
   read -r ANSWER
   if [ "${ANSWER,,}" != "y" ]; then
@@ -47,4 +75,6 @@ else
 fi
 
 # pull the merged changes with rebase, so the changed commit ID in GitHub creates no problems
-git pull --rebase
+if [ "${SKIP_PULL}" != "1" ]; then
+  git pull --rebase
+fi
