@@ -1,7 +1,7 @@
 #!/bin/bash
 OLDNAME="$1"
 NEWNAME="$2"
-if [ -z "$OLDNAME" -o -z "$NEWNAME" ]; then
+if [ -z "$OLDNAME" ] || [ -z "$NEWNAME" ]; then
   echo "Usage: git-tag-rename <oldname> <newname>"
   exit 1
 fi
@@ -12,24 +12,24 @@ if [ $? -eq 0 ]; then
   exit 1
 fi
 
-if [ -n "`git status --porcelain`" ]; then
+if [ -n "$(git status --porcelain)" ]; then
   echo "You have uncommitted changes. Please commit first."
   exit 1
 fi
 
 echo "Renaming tag '$OLDNAME' into '$NEWNAME'..."
 
-DATE=`git show "tags/$OLDNAME" | grep "^Date: " | head -n1 | sed -e 's|^Date: *||'`
+DATE=$(git show "tags/$OLDNAME" | grep "^Date: " | head -n1 | sed -e 's|^Date: *||')
 echo "Date of tag: $DATE"
 
-TAGMSG=`mktemp`
+TAGMSG=$(mktemp)
 git show "tags/$OLDNAME" | tr '\n' '\f' | sed -e 's|^commit .*$||' -e 's|^[^\f]*\f[^\f]*\f[^\f]*\f\f||' -e 's|\fcommit .*$||' | tr '\f' '\n' > "$TAGMSG"
 
-if [ -z "`cat $TAGMSG`" ]; then
-  echo "(no annotation given in original tag)" > $TAGMSG
+if [ -z "$(cat "$TAGMSG")" ]; then
+  echo "(no annotation given in original tag)" > "$TAGMSG"
 fi
-echo "" >> $TAGMSG
-echo "This tag was renamed from $OLDNAME to $NEWNAME" >> $TAGMSG
+echo "" >> "$TAGMSG"
+echo "This tag was renamed from $OLDNAME to $NEWNAME" >> "$TAGMSG"
 
 echo "Extracted tag message: -->"
 cat "$TAGMSG"
@@ -42,8 +42,8 @@ echo "=== Creating new tag"
 GIT_COMMITTER_DATE="$DATE" git tag -a -F "$TAGMSG" "$NEWNAME"
 
 echo "=== Comparing tags"
-git checkout master
-if [ -n "`git diff \"tags/$OLDNAME\" \"tags/$NEWNAME\"`" ]; then
+git checkout "$( git default-branch )"
+if [ -n "$(git diff "tags/$OLDNAME" "tags/$NEWNAME")" ]; then
   echo "The tags differ! Something went wrong."
   exit 1
 fi
