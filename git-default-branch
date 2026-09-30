@@ -1,2 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
+
 git remote show origin | grep 'HEAD branch:' | sed -e 's/.*HEAD branch: //'

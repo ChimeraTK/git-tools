@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
+
 OLDNAME="$1"
 NEWNAME="$2"
 if [ -z "$OLDNAME" ] || [ -z "$NEWNAME" ]; then
