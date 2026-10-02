@@ -1,4 +1,6 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
+
 default_branch=$(git default-branch)
 
 git log --oneline "origin/${default_branch}..HEAD"

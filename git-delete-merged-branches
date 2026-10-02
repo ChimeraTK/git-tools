@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 if ! which chronic > /dev/null; then
   echo "chronic not found, install moreutils package:"

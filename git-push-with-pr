@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 AUTO_YES=0
 SKIP_PULL=0
