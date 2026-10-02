@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 
 BRANCHES=`git branch -r | grep -v origin/tags/ | grep -v origin/trunk | sed -e 's_origin/__'`
 TAGS=`git branch -r | grep origin/tags/ | sed -e 's_origin/tags/__'`
